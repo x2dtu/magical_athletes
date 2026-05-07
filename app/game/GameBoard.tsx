@@ -19,10 +19,10 @@ function ordinal(n: number): string {
 
 type TurnPhase =
   | { type: "ANNOUNCING"; name: string; color: string }
-  | { type: "WAITING_FOR_ACTION" }  // human: show Roll/GetUp; AI: auto-act
-  | { type: "SHOWING_ROLL"; roll: number }  // die visible, about to apply
+  | { type: "WAITING_FOR_ACTION" } // human: show Roll/GetUp; AI: auto-act
+  | { type: "SHOWING_ROLL"; roll: number } // die visible, about to apply
   | { type: "ANIMATING"; steps: TurnStep[]; index: number }
-  | { type: "WAITING_FOR_END_TURN" }  // human clicks End Turn
+  | { type: "WAITING_FOR_END_TURN" } // human clicks End Turn
   | { type: "GAME_OVER" };
 
 const DELAY = { announce: 800, roll: 1000, step: 800, endPause: 600 };
@@ -48,7 +48,7 @@ export default function GameBoard() {
   // Advance phase when game/turn changes are triggered by setGame
   const effectivePhase: TurnPhase = useMemo(
     () => (game.finished ? { type: "GAME_OVER" } : phase),
-    [game.finished, phase]
+    [game.finished, phase],
   );
 
   function advanceTurn() {
@@ -198,9 +198,7 @@ export default function GameBoard() {
       )}
 
       {/* Die display */}
-      <div className="flex justify-center h-24 items-center">
-        {roll !== null && <DieFace value={roll} />}
-      </div>
+      <div className="flex justify-center h-24 items-center">{roll !== null && <DieFace value={roll} />}</div>
 
       {/* Controls */}
       <div className="flex gap-3 justify-center flex-wrap">
@@ -257,8 +255,11 @@ export default function GameBoard() {
               {p.isHuman && <span className="text-xs text-blue-500">(You)</span>}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              {CHARACTERS.find((c) => c.id === p.characterId)?.name} · Position: {p.position}/{BOARD_SIZE} {p.finished && "✅"}{p.tripped && " 🤕"}
+              {CHARACTERS.find((c) => c.id === p.characterId)?.name} · Position: {p.position}/{BOARD_SIZE}{" "}
+              {p.finished && "✅"}
+              {p.tripped && " 🤕"}
             </div>
+            <div className="text-xs font-medium text-amber-600 mt-0.5">⭐ {p.points} pts</div>
             {p.characterId && (
               <div className="text-xs text-gray-400 mt-1 italic">
                 {CHARACTERS.find((c) => c.id === p.characterId)?.description}
@@ -287,6 +288,39 @@ export default function GameBoard() {
           </div>
         )}
       </div>
+
+      {/* End-of-race dialog */}
+      {game.finished && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
+            <h2 className="text-xl font-bold text-center mb-4">🏁 Race Over!</h2>
+            <div className="space-y-2 mb-6">
+              {[...game.players]
+                .sort((a, b) => b.points - a.points)
+                .map((p, i) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between px-3 py-2 rounded"
+                    style={{ backgroundColor: `${p.color}15` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-gray-500">{i + 1}.</span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                      <span className="text-sm font-medium">{p.name}</span>
+                    </div>
+                    <span className="font-bold text-sm">{p.points} pts</span>
+                  </div>
+                ))}
+            </div>
+            <button
+              onClick={reset}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+            >
+              Play Again
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,11 +9,17 @@ export interface Player {
   tripped: boolean;
   characterId: string;
   isHuman: boolean;
+  points: number;
 }
+
+export type SpaceEffect =
+  | { type: "gain_point"; amount: number }
+  | { type: "move"; offset: number }  // positive = forward, negative = backward
+  | { type: "trip" };
 
 export interface BoardSpace {
   index: number;
-  // Future: effect that triggers on landing
+  effect?: SpaceEffect;
 }
 
 export interface Character {

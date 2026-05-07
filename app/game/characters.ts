@@ -12,7 +12,6 @@ export const CHARACTERS: Character[] = [
         phase: Phase.TURN_END,
         check: (ctx) => {
           const { event, owner, players } = ctx;
-          if (event.playerId === owner.id) return null;
           if (event.type !== EventType.TURN_END) return null;
           if (owner.finished) return null;
 

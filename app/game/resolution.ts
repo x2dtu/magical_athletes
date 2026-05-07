@@ -6,6 +6,7 @@ import {
   AbilityTrigger,
   ResolutionContext,
   Character,
+  BoardSpace,
 } from "./types";
 
 /**
@@ -65,6 +66,7 @@ export function resolveReactPhase(
   initialEvents: GameEvent[],
   players: Player[],
   characters: Character[],
+  board: BoardSpace[] = [],
 ): ResolutionResult {
   const allLogs: string[] = [];
   const steps: ResolutionStep[] = [];
@@ -79,6 +81,7 @@ export function resolveReactPhase(
     const triggers = getTriggersForPhase(Phase.REACT, currentPlayers, characters);
 
     for (const event of pendingEvents) {
+      // Process character abilities
       for (const { trigger, owner } of triggers) {
         const currentOwner = currentPlayers.find((p) => p.id === owner.id)!;
         if (currentOwner.finished) continue;
@@ -109,6 +112,55 @@ export function resolveReactPhase(
 
         nextEvents.push(...result.events);
       }
+
+      // Process board space effects for the moved player
+      if (event.type === EventType.PLAYER_MOVED) {
+        const mover = currentPlayers.find((p) => p.id === event.playerId)!;
+        if (mover.finished || mover.position !== event.to) continue;
+        const space = board[event.to];
+        if (!space?.effect) continue;
+
+        const effect = space.effect;
+        if (effect.type === "gain_point") {
+          currentPlayers = currentPlayers.map((p) =>
+            p.id === mover.id ? { ...p, points: p.points + effect.amount } : p
+          );
+          const msg = `${mover.name} lands on a bonus space and gains ${effect.amount} point!`;
+          allLogs.push(msg);
+          steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
+        } else if (effect.type === "trip") {
+          if (!mover.tripped) {
+            currentPlayers = currentPlayers.map((p) =>
+              p.id === mover.id ? { ...p, tripped: true } : p
+            );
+            const msg = `${mover.name} lands on a trap and gets tripped!`;
+            allLogs.push(msg);
+            steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
+          }
+        } else if (effect.type === "move") {
+          const newPos = Math.max(0, Math.min(event.to + effect.offset, 30));
+          if (newPos !== event.to) {
+            currentPlayers = currentPlayers.map((p) =>
+              p.id === mover.id ? { ...p, position: newPos, finished: newPos >= 30 } : p
+            );
+            const dir = effect.offset > 0 ? "forward" : "backward";
+            const msg = `${mover.name} lands on a space and moves ${dir} ${Math.abs(effect.offset)} to space ${newPos}!`;
+            allLogs.push(msg);
+            steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
+
+            const snapshot = stateSnapshot(currentPlayers);
+            if (visitedStates.has(snapshot)) {
+              const loopMsg = "⚠️ Loop detected — resolution stopped.";
+              allLogs.push(loopMsg);
+              steps.push({ players: [...currentPlayers], message: loopMsg });
+              return { players: currentPlayers, log: allLogs, steps };
+            }
+            visitedStates.add(snapshot);
+
+            nextEvents.push({ type: EventType.PLAYER_MOVED, playerId: mover.id, from: event.to, to: newPos });
+          }
+        }
+      }
     }
 
     pendingEvents = nextEvents;
@@ -125,6 +177,7 @@ export function resolveTurnStartPhase(
   currentPlayerId: string,
   players: Player[],
   characters: Character[],
+  board: BoardSpace[] = [],
 ): ResolutionResult {
   const allLogs: string[] = [];
   const steps: ResolutionStep[] = [];
@@ -153,7 +206,7 @@ export function resolveTurnStartPhase(
     }
 
     if (result.events.length > 0) {
-      const reactResult = resolveReactPhase(result.events, currentPlayers, characters);
+      const reactResult = resolveReactPhase(result.events, currentPlayers, characters, board);
       currentPlayers = reactResult.players;
       allLogs.push(...reactResult.log);
       steps.push(...reactResult.steps);
@@ -217,6 +270,7 @@ export function resolveTurnEndPhase(
   turnStartPosition: number,
   players: Player[],
   characters: Character[],
+  board: BoardSpace[] = [],
 ): ResolutionResult {
   const allLogs: string[] = [];
   const steps: ResolutionStep[] = [];
@@ -248,7 +302,7 @@ export function resolveTurnEndPhase(
 
     // If turn-end abilities cause movement, resolve reactions
     if (result.events.length > 0) {
-      const reactResult = resolveReactPhase(result.events, currentPlayers, characters);
+      const reactResult = resolveReactPhase(result.events, currentPlayers, characters, board);
       currentPlayers = reactResult.players;
       allLogs.push(...reactResult.log);
       steps.push(...reactResult.steps);

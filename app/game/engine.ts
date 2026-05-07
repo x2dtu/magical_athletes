@@ -1,4 +1,4 @@
-import { GameState, LogEntry, Player, EventType, GameEvent } from "./types";
+import { GameState, LogEntry, Player, EventType, GameEvent, SpaceEffect } from "./types";
 import type { BoardSpace } from "./types";
 import { CHARACTERS } from "./characters";
 import { resolveReactPhase, resolveTurnStartPhase, resolvePreRollPhase, resolveTurnEndPhase } from "./resolution";
@@ -17,13 +17,43 @@ export interface TurnResult {
   steps: TurnStep[]; // intermediate states for animated playback
 }
 
+const SPACE_EFFECTS: Record<number, SpaceEffect> = {
+  1: { type: "gain_point", amount: 1 },
+  5: { type: "trip" },
+  7: { type: "move", offset: 3 },
+  11: { type: "move", offset: 1 },
+  13: { type: "gain_point", amount: 1 },
+  16: { type: "move", offset: -4 },
+  17: { type: "trip" },
+  23: { type: "move", offset: 2 },
+  24: { type: "move", offset: -2 },
+  26: { type: "trip" },
+};
+
 export function createBoard(): BoardSpace[] {
-  return Array.from({ length: BOARD_SIZE + 1 }, (_, i) => ({ index: i }));
+  return Array.from({ length: BOARD_SIZE + 1 }, (_, i) => ({
+    index: i,
+    effect: SPACE_EFFECTS[i],
+  }));
 }
 
 const AI_NAMES = [
-  "Luna", "Jasper", "Sage", "Ember", "Rowan", "Ivy", "Felix", "Hazel",
-  "Orion", "Maple", "Finn", "Wren", "Atlas", "Clover", "Rune", "Briar",
+  "Luna",
+  "Jasper",
+  "Sage",
+  "Ember",
+  "Rowan",
+  "Ivy",
+  "Felix",
+  "Hazel",
+  "Orion",
+  "Maple",
+  "Finn",
+  "Wren",
+  "Atlas",
+  "Clover",
+  "Rune",
+  "Briar",
 ];
 
 function pickRandomNames(count: number): string[] {
@@ -47,6 +77,7 @@ export function createPlayers(count: number, humanCount: number = 1): Player[] {
       tripped: false,
       characterId: chars[i % chars.length].id,
       isHuman,
+      points: 0,
     };
   });
 }
@@ -84,7 +115,7 @@ export function applyMove(state: GameState, roll: number): TurnResult {
   const turnLogs: string[] = [];
 
   // --- TURN_START phase ---
-  const turnStartResult = resolveTurnStartPhase(player.id, state.players, state.characters);
+  const turnStartResult = resolveTurnStartPhase(player.id, state.players, state.characters, state.board);
   let players = turnStartResult.players;
   turnLogs.push(...turnStartResult.log);
   steps.push(...turnStartResult.steps);
@@ -106,12 +137,13 @@ export function applyMove(state: GameState, roll: number): TurnResult {
   const endPosition = Math.min(currentPlayer.position + effectiveRoll, BOARD_SIZE);
 
   players = players.map((p) =>
-    p.id === player.id ? { ...p, position: endPosition, finished: endPosition >= BOARD_SIZE } : p
+    p.id === player.id ? { ...p, position: endPosition, finished: endPosition >= BOARD_SIZE } : p,
   );
 
-  const moveMsg = effectiveRoll !== roll
-    ? `${currentPlayer.name} rolled ${roll} (+${preRollResult.rollModifier} bonus = ${effectiveRoll}) and moved from ${startPosition} to ${endPosition}.`
-    : `${currentPlayer.name} rolled ${roll} and moved from ${startPosition} to ${endPosition}.`;
+  const moveMsg =
+    effectiveRoll !== roll
+      ? `${currentPlayer.name} rolled ${roll} (+${preRollResult.rollModifier} bonus = ${effectiveRoll}) and moved from ${startPosition} to ${endPosition}.`
+      : `${currentPlayer.name} rolled ${roll} and moved from ${startPosition} to ${endPosition}.`;
   turnLogs.push(moveMsg);
   steps.push({ players: [...players], message: moveMsg });
 
@@ -123,13 +155,13 @@ export function applyMove(state: GameState, roll: number): TurnResult {
     to: endPosition,
   };
 
-  const reactResult = resolveReactPhase([moveEvent], players, state.characters);
+  const reactResult = resolveReactPhase([moveEvent], players, state.characters, state.board);
   players = reactResult.players;
   turnLogs.push(...reactResult.log);
   steps.push(...reactResult.steps);
 
   // --- TURN_END phase ---
-  const turnEndResult = resolveTurnEndPhase(player.id, startPosition, players, state.characters);
+  const turnEndResult = resolveTurnEndPhase(player.id, startPosition, players, state.characters, state.board);
   players = turnEndResult.players;
   turnLogs.push(...turnEndResult.log);
   steps.push(...turnEndResult.steps);
@@ -140,7 +172,10 @@ export function applyMove(state: GameState, roll: number): TurnResult {
   const newPlacements = justFinished ? [...state.placements, movedPlayer] : state.placements;
 
   if (justFinished) {
-    const placeMsg = `${movedPlayer.name} takes ${ordinalPlace(newPlacements.length)}!`;
+    const PLACEMENT_POINTS = [5, 3];
+    const pointsAwarded = PLACEMENT_POINTS[newPlacements.length - 1] ?? 0;
+    players = players.map((p) => (p.id === movedPlayer.id ? { ...p, points: p.points + pointsAwarded } : p));
+    const placeMsg = `${movedPlayer.name} takes ${ordinalPlace(newPlacements.length)}! (+${pointsAwarded} pts)`;
     turnLogs.push(placeMsg);
     steps.push({ players: [...players], message: placeMsg });
   }
@@ -167,16 +202,14 @@ export function endTurn(state: GameState): GameState {
 /** Handle a tripped player getting back up (moved 0 — triggers TURN_END) */
 export function getUp(state: GameState): TurnResult {
   const player = state.players[state.currentPlayerIndex];
-  let players = state.players.map((p) =>
-    p.id === player.id ? { ...p, tripped: false } : p
-  );
+  let players = state.players.map((p) => (p.id === player.id ? { ...p, tripped: false } : p));
 
   const steps: TurnStep[] = [];
   const getUpMsg = `${player.name} gets back up.`;
   steps.push({ players: [...players], message: getUpMsg });
 
   // Getting up = moving 0, so run TURN_END phase
-  const turnEndResult = resolveTurnEndPhase(player.id, player.position, players, state.characters);
+  const turnEndResult = resolveTurnEndPhase(player.id, player.position, players, state.characters, state.board);
   players = turnEndResult.players;
   steps.push(...turnEndResult.steps);
 
