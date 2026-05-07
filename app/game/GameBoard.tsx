@@ -5,6 +5,7 @@ import { GameState, Player } from "./types";
 import { initGame, rollForCurrentPlayer, applyMove, getUp, endTurn, TurnStep } from "./engine";
 import { CHARACTERS } from "./characters";
 import DieFace from "./DieFace";
+import BoardImage from "./BoardImage";
 
 const BOARD_SIZE = 30;
 
@@ -241,28 +242,7 @@ export default function GameBoard() {
       )}
 
       {/* Board */}
-      <div className="grid grid-cols-10 gap-1">
-        {Array.from({ length: BOARD_SIZE + 1 }, (_, i) => {
-          const playersHere = shownPlayers.filter((p) => p.position === i && !p.finished);
-          const isStart = i === 0;
-          const isFinish = i === BOARD_SIZE;
-          return (
-            <div
-              key={i}
-              className={`relative h-12 border rounded flex items-center justify-center text-xs ${
-                isStart ? "bg-green-100 border-green-400" : isFinish ? "bg-red-100 border-red-400" : "bg-gray-50 border-gray-300"
-              }`}
-            >
-              <span className="text-gray-400">{i}</span>
-              <div className="absolute inset-0 flex items-center justify-center gap-0.5">
-                {playersHere.map((p) => (
-                  <div key={p.id} className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: p.color }} title={p.name} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <BoardImage players={shownPlayers} />
 
       {/* Players */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -277,7 +257,7 @@ export default function GameBoard() {
               {p.isHuman && <span className="text-xs text-blue-500">(You)</span>}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Position: {p.position}/{BOARD_SIZE} {p.finished && "✅"}{p.tripped && " 🤕"}
+              {CHARACTERS.find((c) => c.id === p.characterId)?.name} · Position: {p.position}/{BOARD_SIZE} {p.finished && "✅"}{p.tripped && " 🤕"}
             </div>
             {p.characterId && (
               <div className="text-xs text-gray-400 mt-1 italic">
