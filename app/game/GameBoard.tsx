@@ -268,6 +268,7 @@ export default function GameBoard() {
           </div>
         ))}
       </div>
+      <img src="/Duelist.png" className="w-full rounded-lg" />
 
       {/* Log — newest first */}
       <div ref={logRef} className="border rounded p-3 max-h-48 overflow-y-auto">
