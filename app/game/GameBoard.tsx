@@ -7,8 +7,6 @@ import { CHARACTERS } from "./characters";
 import DieFace from "./DieFace";
 import BoardImage from "./BoardImage";
 
-const BOARD_SIZE = 30;
-
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
@@ -244,31 +242,31 @@ export default function GameBoard() {
 
       {/* Players */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {shownPlayers.map((p, i) => (
-          <div
-            key={p.id}
-            className={`p-3 rounded border ${i === game.currentPlayerIndex && !game.finished ? "border-2 border-blue-500" : "border-gray-200"}`}
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: p.color }} />
-              <span className="font-medium text-sm">{p.name}</span>
-              {p.isHuman && <span className="text-xs text-blue-500">(You)</span>}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {CHARACTERS.find((c) => c.id === p.characterId)?.name} · Position: {p.position}/{BOARD_SIZE}{" "}
-              {p.finished && "✅"}
-              {p.tripped && " 🤕"}
-            </div>
-            <div className="text-xs font-medium text-amber-600 mt-0.5">⭐ {p.points} pts</div>
-            {p.characterId && (
-              <div className="text-xs text-gray-400 mt-1 italic">
-                {CHARACTERS.find((c) => c.id === p.characterId)?.description}
+        {shownPlayers.map((p, i) => {
+          const char = CHARACTERS.find((c) => c.id === p.characterId);
+          return (
+            <div
+              key={p.id}
+              className={`rounded border overflow-hidden ${i === game.currentPlayerIndex && !game.finished ? "border-2 border-blue-500" : "border-gray-200"}`}
+            >
+              <div className="p-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                  <span className="font-medium text-sm">{p.name}</span>
+                  {p.isHuman && <span className="text-xs text-blue-500">(You)</span>}
+                </div>
+                <div className="text-xs font-medium text-amber-600 mt-0.5">
+                  ⭐ {p.points} pts{p.tripped && " • 🤕 Tripped"}
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+              {char && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/characters/${char.image}`} alt={char.name} className="w-full" />
+              )}
+            </div>
+          );
+        })}
       </div>
-      <img src="/Duelist.png" className="w-full rounded-lg" />
 
       {/* Log — newest first */}
       <div ref={logRef} className="border rounded p-3 max-h-48 overflow-y-auto">
