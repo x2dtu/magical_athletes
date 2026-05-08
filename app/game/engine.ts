@@ -39,37 +39,12 @@ export function createBoard(): BoardSpace[] {
   }));
 }
 
-const AI_NAMES = [
-  "Luna",
-  "Jasper",
-  "Sage",
-  "Ember",
-  "Rowan",
-  "Ivy",
-  "Felix",
-  "Hazel",
-  "Orion",
-  "Maple",
-  "Finn",
-  "Wren",
-  "Atlas",
-  "Clover",
-  "Rune",
-  "Briar",
-];
-
-function pickRandomNames(count: number): string[] {
-  const shuffled = [...AI_NAMES].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-}
-
 export function createPlayers(count: number, humanCount: number = 1): Player[] {
   const chars = CHARACTERS;
-  const aiNames = pickRandomNames(count - humanCount);
-  let aiIndex = 0;
   return Array.from({ length: count }, (_, i) => {
     const isHuman = i < humanCount;
-    const name = isHuman ? "Player" : aiNames[aiIndex++];
+    const char = chars[i % chars.length];
+    const name = isHuman ? "Player" : char.name;
     return {
       id: `player-${i}`,
       name,
@@ -77,7 +52,7 @@ export function createPlayers(count: number, humanCount: number = 1): Player[] {
       color: PLAYER_COLORS[i],
       finished: false,
       tripped: false,
-      characterId: chars[i % chars.length].id,
+      characterId: char.id,
       isHuman,
       points: 0,
     };
