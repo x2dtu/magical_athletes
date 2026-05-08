@@ -1,22 +1,11 @@
-import {
-  Player,
-  GameEvent,
-  EventType,
-  Phase,
-  AbilityTrigger,
-  ResolutionContext,
-  Character,
-  BoardSpace,
-} from "./types";
+import { Player, GameEvent, EventType, Phase, AbilityTrigger, ResolutionContext, Character, BoardSpace } from "./types";
 
 /**
  * Snapshot the game state as a string for loop detection.
  * A state is defined by all player positions + tripped statuses.
  */
 function stateSnapshot(players: Player[]): string {
-  return players
-    .map((p) => `${p.id}:${p.position}:${p.tripped ? 1 : 0}`)
-    .join("|");
+  return players.map((p) => `${p.id}:${p.position}:${p.tripped ? 1 : 0}`).join("|");
 }
 
 /**
@@ -123,16 +112,14 @@ export function resolveReactPhase(
         const effect = space.effect;
         if (effect.type === "gain_point") {
           currentPlayers = currentPlayers.map((p) =>
-            p.id === mover.id ? { ...p, points: p.points + effect.amount } : p
+            p.id === mover.id ? { ...p, points: p.points + effect.amount } : p,
           );
           const msg = `${mover.name} lands on a bonus space and gains ${effect.amount} point!`;
           allLogs.push(msg);
           steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
         } else if (effect.type === "trip") {
           if (!mover.tripped) {
-            currentPlayers = currentPlayers.map((p) =>
-              p.id === mover.id ? { ...p, tripped: true } : p
-            );
+            currentPlayers = currentPlayers.map((p) => (p.id === mover.id ? { ...p, tripped: true } : p));
             const msg = `${mover.name} lands on a trap and gets tripped!`;
             allLogs.push(msg);
             steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
@@ -141,7 +128,7 @@ export function resolveReactPhase(
           const newPos = Math.max(0, Math.min(event.to + effect.offset, 30));
           if (newPos !== event.to) {
             currentPlayers = currentPlayers.map((p) =>
-              p.id === mover.id ? { ...p, position: newPos, finished: newPos >= 30 } : p
+              p.id === mover.id ? { ...p, position: newPos, finished: newPos >= 30 } : p,
             );
             const dir = effect.offset > 0 ? "forward" : "backward";
             const msg = `${mover.name} lands on a space and moves ${dir} ${Math.abs(effect.offset)} to space ${newPos}!`;

@@ -14,7 +14,7 @@ export interface Player {
 
 export type SpaceEffect =
   | { type: "gain_point"; amount: number }
-  | { type: "move"; offset: number }  // positive = forward, negative = backward
+  | { type: "move"; offset: number } // positive = forward, negative = backward
   | { type: "trip" };
 
 export interface BoardSpace {
@@ -26,6 +26,7 @@ export interface Character {
   id: string;
   name: string;
   description: string;
+  image: string;
   abilities: AbilityTrigger[];
 }
 
@@ -33,20 +34,20 @@ export interface Character {
 
 export enum Phase {
   TURN_START = "TURN_START", // beginning of turn, before roll (e.g., Party Animal moves others)
-  PRE_ROLL = "PRE_ROLL",     // can modify the dice roll
-  MOVE = "MOVE",             // primary movement happens (engine-driven, not an ability phase)
-  LAND = "LAND",             // board space effects trigger on landing
-  REACT = "REACT",           // reactive abilities (Heckler, Romantic, Baba Yaga)
-  TURN_END = "TURN_END",     // cleanup / end-of-turn effects
+  PRE_ROLL = "PRE_ROLL", // can modify the dice roll
+  MOVE = "MOVE", // primary movement happens (engine-driven, not an ability phase)
+  LAND = "LAND", // board space effects trigger on landing
+  REACT = "REACT", // reactive abilities (Heckler, Romantic, Baba Yaga)
+  TURN_END = "TURN_END", // cleanup / end-of-turn effects
 }
 
 // --- Events ---
 
 export enum EventType {
   TURN_START = "TURN_START",
-  PLAYER_MOVED = "PLAYER_MOVED",   // a player changed position (for any reason)
+  PLAYER_MOVED = "PLAYER_MOVED", // a player changed position (for any reason)
   PLAYER_LANDED = "PLAYER_LANDED", // a player finished moving and is now on a space
-  TURN_END = "TURN_END",           // a player's turn has fully resolved
+  TURN_END = "TURN_END", // a player's turn has fully resolved
 }
 
 export interface GameEvent {
@@ -60,20 +61,20 @@ export interface GameEvent {
 
 export interface ResolutionContext {
   event: GameEvent;
-  owner: Player;          // the ability owner's current state
-  players: Player[];      // all players' current state
+  owner: Player; // the ability owner's current state
+  players: Player[]; // all players' current state
 }
 
 export interface AbilityResult {
-  players: Player[];      // updated player states
-  events: GameEvent[];    // new events caused by this ability
-  log: string[];          // messages to display
-  rollModifier?: number;  // added to dice roll (PRE_ROLL phase)
+  players: Player[]; // updated player states
+  events: GameEvent[]; // new events caused by this ability
+  log: string[]; // messages to display
+  rollModifier?: number; // added to dice roll (PRE_ROLL phase)
 }
 
 export interface AbilityTrigger {
   phase: Phase;
-  priority?: number;      // lower = earlier within same phase (default 0)
+  priority?: number; // lower = earlier within same phase (default 0)
   check: (ctx: ResolutionContext) => AbilityResult | null;
 }
 

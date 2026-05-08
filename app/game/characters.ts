@@ -7,6 +7,7 @@ export const CHARACTERS: Character[] = [
     id: "heckler",
     name: "Heckler",
     description: "When a racer ends their turn within 1 space of where they started, I move 2.",
+    image: "Heckler.png",
     abilities: [
       {
         phase: Phase.TURN_END,
@@ -22,7 +23,7 @@ export const CHARACTERS: Character[] = [
           if (newPos === owner.position) return null;
 
           const updatedPlayers = players.map((p) =>
-            p.id === owner.id ? { ...p, position: newPos, finished: newPos >= BOARD_SIZE } : p
+            p.id === owner.id ? { ...p, position: newPos, finished: newPos >= BOARD_SIZE } : p,
           );
 
           const moveEvent: GameEvent = {
@@ -44,7 +45,9 @@ export const CHARACTERS: Character[] = [
   {
     id: "baba-yaga",
     name: "Baba Yaga",
-    description: "Any character that lands on Baba Yaga's space gets tripped. If Baba Yaga lands on others, they get tripped.",
+    description:
+      "Any character that lands on Baba Yaga's space gets tripped. If Baba Yaga lands on others, they get tripped.",
+    image: "Baba_Yaga.png",
     abilities: [
       {
         phase: Phase.REACT,
@@ -58,9 +61,7 @@ export const CHARACTERS: Character[] = [
             const mover = players.find((p) => p.id === event.playerId)!;
             if (mover.tripped || mover.finished) return null;
 
-            const updatedPlayers = players.map((p) =>
-              p.id === event.playerId ? { ...p, tripped: true } : p
-            );
+            const updatedPlayers = players.map((p) => (p.id === event.playerId ? { ...p, tripped: true } : p));
             return {
               players: updatedPlayers,
               events: [],
@@ -71,14 +72,12 @@ export const CHARACTERS: Character[] = [
           // Case 2: Baba Yaga landed on a space with others
           if (event.playerId === owner.id) {
             const victims = players.filter(
-              (p) => p.id !== owner.id && p.position === event.to && !p.tripped && !p.finished
+              (p) => p.id !== owner.id && p.position === event.to && !p.tripped && !p.finished,
             );
             if (victims.length === 0) return null;
 
             const victimIds = new Set(victims.map((v) => v.id));
-            const updatedPlayers = players.map((p) =>
-              victimIds.has(p.id) ? { ...p, tripped: true } : p
-            );
+            const updatedPlayers = players.map((p) => (victimIds.has(p.id) ? { ...p, tripped: true } : p));
             return {
               players: updatedPlayers,
               events: [],
@@ -95,6 +94,7 @@ export const CHARACTERS: Character[] = [
     id: "romantic",
     name: "Romantic",
     description: "Moves forward 2 whenever any character lands on a space with exactly one other character.",
+    image: "Romantic.png",
     abilities: [
       {
         phase: Phase.REACT,
@@ -104,9 +104,7 @@ export const CHARACTERS: Character[] = [
           if (owner.finished) return null;
 
           // Count how many players are on the space the mover landed on
-          const playersOnSpace = players.filter(
-            (p) => p.position === event.to && !p.finished
-          );
+          const playersOnSpace = players.filter((p) => p.position === event.to && !p.finished);
 
           // Trigger when exactly 2 players share the space (the mover + one other)
           if (playersOnSpace.length !== 2) return null;
@@ -115,7 +113,7 @@ export const CHARACTERS: Character[] = [
           if (newPos === owner.position) return null;
 
           const updatedPlayers = players.map((p) =>
-            p.id === owner.id ? { ...p, position: newPos, finished: newPos >= BOARD_SIZE } : p
+            p.id === owner.id ? { ...p, position: newPos, finished: newPos >= BOARD_SIZE } : p,
           );
 
           const moveEvent: GameEvent = {
@@ -128,7 +126,9 @@ export const CHARACTERS: Character[] = [
           return {
             players: updatedPlayers,
             events: [moveEvent],
-            log: [`${owner.name} (Romantic) swoons at the pair on space ${event.to} and advances 2 to space ${newPos}.`],
+            log: [
+              `${owner.name} (Romantic) swoons at the pair on space ${event.to} and advances 2 to space ${newPos}.`,
+            ],
           };
         },
       },
@@ -137,7 +137,9 @@ export const CHARACTERS: Character[] = [
   {
     id: "party-animal",
     name: "Party Animal",
-    description: "At turn start, pulls all others 1 space closer. Gets +1 to dice roll for each character on his space (including himself).",
+    description:
+      "At turn start, pulls all others 1 space closer. Gets +1 to dice roll for each character on his space (including himself).",
+    image: "Party_Animal.png",
     abilities: [
       {
         phase: Phase.TURN_START,
@@ -179,9 +181,7 @@ export const CHARACTERS: Character[] = [
         phase: Phase.PRE_ROLL,
         check: (ctx) => {
           const { owner, players } = ctx;
-          const playersOnSpace = players.filter(
-            (p) => p.position === owner.position && !p.finished
-          );
+          const playersOnSpace = players.filter((p) => p.position === owner.position && !p.finished);
           const bonus = playersOnSpace.length; // includes self, so always >= 1
 
           return {
