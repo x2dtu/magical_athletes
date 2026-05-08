@@ -138,7 +138,7 @@ export const CHARACTERS: Character[] = [
     id: "party-animal",
     name: "Party Animal",
     description:
-      "At turn start, pulls all others 1 space closer. Gets +1 to dice roll for each character on his space (including himself).",
+      "Before my main move, all racers move 1 space towards me. Each other racer on my space gives me +1 to my main move.",
     image: "Party_Animal.png",
     abilities: [
       {
@@ -149,22 +149,19 @@ export const CHARACTERS: Character[] = [
           if (ctx.event.playerId !== owner.id) return null;
 
           const movedEvents: GameEvent[] = [];
-          const logs: string[] = [];
+          const movedNames: string[] = [];
           const updatedPlayers = players.map((p) => {
             if (p.id === owner.id || p.finished || p.position === 0) return p;
             let newPos: number;
             if (p.position < owner.position) {
-              // Behind: move forward 1
               newPos = Math.min(p.position + 1, BOARD_SIZE);
             } else if (p.position > owner.position) {
-              // Ahead: move back 1
               newPos = p.position - 1;
             } else {
-              // Same space: no move
               return p;
             }
             movedEvents.push({ type: EventType.PLAYER_MOVED, playerId: p.id, from: p.position, to: newPos });
-            logs.push(`${owner.name} (Party Animal) pulls ${p.name} to space ${newPos}.`);
+            movedNames.push(p.name);
             return { ...p, position: newPos };
           });
 
@@ -173,7 +170,7 @@ export const CHARACTERS: Character[] = [
           return {
             players: updatedPlayers,
             events: movedEvents,
-            log: logs,
+            log: [`${owner.name} (Party Animal) pulls ${movedNames.join(", ")} closer.`],
           };
         },
       },
@@ -181,13 +178,16 @@ export const CHARACTERS: Character[] = [
         phase: Phase.PRE_ROLL,
         check: (ctx) => {
           const { owner, players } = ctx;
-          const playersOnSpace = players.filter((p) => p.position === owner.position && !p.finished);
-          const bonus = playersOnSpace.length; // includes self, so always >= 1
+          const othersOnSpace = players.filter(
+            (p) => p.id !== owner.id && p.position === owner.position && !p.finished
+          );
+          if (othersOnSpace.length === 0) return null;
 
+          const bonus = othersOnSpace.length;
           return {
             players,
             events: [],
-            log: [`${owner.name} (Party Animal) parties with ${bonus} on his space: +${bonus} to roll!`],
+            log: [`${owner.name} (Party Animal) parties with ${bonus} other(s) on his space: +${bonus} to roll!`],
             rollModifier: bonus,
           };
         },

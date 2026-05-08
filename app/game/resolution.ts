@@ -37,7 +37,9 @@ function getTriggersForPhase(
 export interface ResolutionStep {
   players: Player[];
   message: string;
-  color?: string; // color of the player whose ability triggered
+  color?: string;
+  source?: "ability" | "space";
+  soundHint?: "trip" | "ability" | "move_space" | "point";
 }
 
 export interface ResolutionResult {
@@ -87,7 +89,7 @@ export function resolveReactPhase(
         currentPlayers = result.players;
         allLogs.push(...result.log);
         for (const msg of result.log) {
-          steps.push({ players: [...currentPlayers], message: msg, color: currentOwner.color });
+          steps.push({ players: [...currentPlayers], message: msg, color: currentOwner.color, source: "ability" });
         }
 
         const snapshot = stateSnapshot(currentPlayers);
@@ -116,13 +118,13 @@ export function resolveReactPhase(
           );
           const msg = `${mover.name} lands on a bonus space and gains ${effect.amount} point!`;
           allLogs.push(msg);
-          steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
+          steps.push({ players: [...currentPlayers], message: msg, color: mover.color, source: "space", soundHint: "point" });
         } else if (effect.type === "trip") {
           if (!mover.tripped) {
             currentPlayers = currentPlayers.map((p) => (p.id === mover.id ? { ...p, tripped: true } : p));
             const msg = `${mover.name} lands on a trap and gets tripped!`;
             allLogs.push(msg);
-            steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
+            steps.push({ players: [...currentPlayers], message: msg, color: mover.color, source: "space", soundHint: "trip" });
           }
         } else if (effect.type === "move") {
           const newPos = Math.max(0, Math.min(event.to + effect.offset, 30));
@@ -133,7 +135,7 @@ export function resolveReactPhase(
             const dir = effect.offset > 0 ? "forward" : "backward";
             const msg = `${mover.name} lands on a space and moves ${dir} ${Math.abs(effect.offset)} to space ${newPos}!`;
             allLogs.push(msg);
-            steps.push({ players: [...currentPlayers], message: msg, color: mover.color });
+            steps.push({ players: [...currentPlayers], message: msg, color: mover.color, source: "space", soundHint: "move_space" });
 
             const snapshot = stateSnapshot(currentPlayers);
             if (visitedStates.has(snapshot)) {
@@ -189,7 +191,7 @@ export function resolveTurnStartPhase(
     currentPlayers = result.players;
     allLogs.push(...result.log);
     for (const msg of result.log) {
-      steps.push({ players: [...currentPlayers], message: msg, color: currentOwner.color });
+      steps.push({ players: [...currentPlayers], message: msg, color: currentOwner.color, source: "ability" });
     }
 
     if (result.events.length > 0) {
@@ -284,7 +286,7 @@ export function resolveTurnEndPhase(
     currentPlayers = result.players;
     allLogs.push(...result.log);
     for (const msg of result.log) {
-      steps.push({ players: [...currentPlayers], message: msg, color: currentOwner.color });
+      steps.push({ players: [...currentPlayers], message: msg, color: currentOwner.color, source: "ability" });
     }
 
     // If turn-end abilities cause movement, resolve reactions

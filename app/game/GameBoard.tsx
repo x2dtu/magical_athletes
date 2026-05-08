@@ -6,6 +6,7 @@ import { initGame, rollForCurrentPlayer, applyMove, getUp, endTurn, TurnStep } f
 import { CHARACTERS } from "./characters";
 import DieFace from "./DieFace";
 import BoardImage from "./BoardImage";
+import { playSound } from "./sounds";
 
 function ordinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
@@ -23,7 +24,7 @@ type TurnPhase =
   | { type: "WAITING_FOR_END_TURN" } // human clicks End Turn
   | { type: "GAME_OVER" };
 
-const DELAY = { announce: 800, roll: 1000, step: 800, endPause: 600 };
+const DELAY = { announce: 800, roll: 1100, step: 700, endPause: 600 };
 const DELAY_INSTANT = { announce: 300, roll: 300, step: 0, endPause: 100 };
 
 export default function GameBoard() {
@@ -84,6 +85,7 @@ export default function GameBoard() {
           }
           const timer = setTimeout(() => {
             const roll = rollForCurrentPlayer();
+            playSound("dice_roll");
             setPhase({ type: "SHOWING_ROLL", roll });
           }, d.roll);
           return () => clearTimeout(timer);
@@ -122,7 +124,16 @@ export default function GameBoard() {
           return () => clearTimeout(timer);
         }
         const timer = setTimeout(() => {
-          setDisplayPlayers(steps[index].players);
+          const step = steps[index];
+          setDisplayPlayers(step.players);
+          // Play sounds based on step content
+          if (step.soundHint) {
+            playSound(step.soundHint);
+          } else if (step.message.toLowerCase().includes("tripped")) {
+            playSound("trip");
+          } else if (step.source === "ability") {
+            playSound("ability");
+          }
           setPhase({ type: "ANIMATING", steps, index: index + 1 });
         }, d.step);
         return () => clearTimeout(timer);
@@ -136,6 +147,7 @@ export default function GameBoard() {
 
   function handleRoll() {
     const roll = rollForCurrentPlayer();
+    playSound("dice_roll");
     setPhase({ type: "SHOWING_ROLL", roll });
   }
 

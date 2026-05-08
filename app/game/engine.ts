@@ -10,6 +10,8 @@ export interface TurnStep {
   players: Player[];
   message: string;
   color?: string;
+  source?: "ability" | "space";
+  soundHint?: "trip" | "ability" | "move_space" | "point";
 }
 
 export interface TurnResult {
@@ -67,7 +69,7 @@ export function createPlayers(count: number, humanCount: number = 1): Player[] {
   let aiIndex = 0;
   return Array.from({ length: count }, (_, i) => {
     const isHuman = i < humanCount;
-    const name = isHuman ? "Michael" : aiNames[aiIndex++];
+    const name = isHuman ? "Player" : aiNames[aiIndex++];
     return {
       id: `player-${i}`,
       name,
@@ -119,6 +121,30 @@ export function applyMove(state: GameState, roll: number): TurnResult {
   let players = turnStartResult.players;
   turnLogs.push(...turnStartResult.log);
   steps.push(...turnStartResult.steps);
+
+  // If the current player got tripped during TURN_START, skip roll and get up instead
+  const playerAfterStart = players.find((p) => p.id === player.id)!;
+  if (playerAfterStart.tripped) {
+    players = players.map((p) => (p.id === player.id ? { ...p, tripped: false } : p));
+    const getUpMsg = `${playerAfterStart.name} gets back up.`;
+    turnLogs.push(getUpMsg);
+    steps.push({ players: [...players], message: getUpMsg });
+
+    // Run TURN_END (moved 0)
+    const turnEndResult = resolveTurnEndPhase(
+      player.id,
+      playerAfterStart.position,
+      players,
+      state.characters,
+      state.board,
+    );
+    players = turnEndResult.players;
+    turnLogs.push(...turnEndResult.log);
+    steps.push(...turnEndResult.steps);
+
+    const newLog: LogEntry[] = steps.map((step) => ({ turn: state.turn, message: step.message, color: step.color }));
+    return { state: { ...state, players, log: [...state.log, ...newLog] }, steps };
+  }
 
   // --- PRE_ROLL phase ---
   const preRollResult = resolvePreRollPhase(player.id, players, state.characters);
@@ -202,9 +228,16 @@ export function endTurn(state: GameState): GameState {
 /** Handle a tripped player getting back up (moved 0 — triggers TURN_END) */
 export function getUp(state: GameState): TurnResult {
   const player = state.players[state.currentPlayerIndex];
-  let players = state.players.map((p) => (p.id === player.id ? { ...p, tripped: false } : p));
 
   const steps: TurnStep[] = [];
+
+  // --- TURN_START phase still fires even when tripped ---
+  const turnStartResult = resolveTurnStartPhase(player.id, state.players, state.characters, state.board);
+  let players = turnStartResult.players;
+  steps.push(...turnStartResult.steps);
+
+  // Clear tripped
+  players = players.map((p) => (p.id === player.id ? { ...p, tripped: false } : p));
   const getUpMsg = `${player.name} gets back up.`;
   steps.push({ players: [...players], message: getUpMsg });
 
@@ -214,6 +247,7 @@ export function getUp(state: GameState): TurnResult {
   steps.push(...turnEndResult.steps);
 
   const allLogs: LogEntry[] = [
+    ...turnStartResult.log.map((message) => ({ turn: state.turn, message })),
     { turn: state.turn, message: getUpMsg },
     ...turnEndResult.log.map((message) => ({ turn: state.turn, message })),
     ...turnEndResult.steps.map((s) => ({ turn: state.turn, message: s.message, color: s.color })),
