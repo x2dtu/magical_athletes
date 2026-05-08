@@ -57,7 +57,7 @@ export default function BoardImage({ players }: { players: Player[] }) {
             {playersHere.map((p) => (
               <div
                 key={p.id}
-                className="w-4 h-4 rounded-full border-2 border-white shadow-md sm:w-5 sm:h-5"
+                className={`w-4 h-4 rounded-full border-2 shadow-md sm:w-5 sm:h-5 ${p.tripped ? "border-black" : "border-white"}`}
                 style={{ backgroundColor: p.color }}
                 title={p.name}
               />
