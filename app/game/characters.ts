@@ -106,8 +106,9 @@ export const CHARACTERS: Character[] = [
           // Count how many players are on the space the mover landed on
           const playersOnSpace = players.filter((p) => p.position === event.to && !p.finished);
 
-          // Trigger when exactly 2 players share the space (the mover + one other)
+          // Trigger when exactly 2 players share the space and the mover is one of them
           if (playersOnSpace.length !== 2) return null;
+          if (!playersOnSpace.some((p) => p.id === event.playerId)) return null;
 
           const newPos = Math.min(owner.position + 2, BOARD_SIZE);
           if (newPos === owner.position) return null;

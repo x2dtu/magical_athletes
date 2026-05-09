@@ -32,6 +32,7 @@ export default function GameBoard() {
   const [phase, setPhase] = useState<TurnPhase>({ type: "WAITING_FOR_ACTION" });
   const [animated, setAnimated] = useState(true);
   const [displayPlayers, setDisplayPlayers] = useState<Player[] | null>(null);
+  const [abilityCard, setAbilityCard] = useState<string | null>(null); // character image filename
   const logRef = useRef<HTMLDivElement>(null);
   const prevTurnRef = useRef(game.turn);
 
@@ -133,6 +134,17 @@ export default function GameBoard() {
             playSound("trip");
           } else if (step.source === "ability") {
             playSound("ability");
+          }
+          // Show ability card animation
+          if (step.source === "ability" && step.color) {
+            const owner = game.players.find((p) => p.color === step.color);
+            if (owner) {
+              const char = CHARACTERS.find((c) => c.id === owner.characterId);
+              if (char) {
+                setAbilityCard(char.image);
+                setTimeout(() => setAbilityCard(null), 600);
+              }
+            }
           }
           setPhase({ type: "ANIMATING", steps, index: index + 1 });
         }, d.step);
@@ -251,6 +263,18 @@ export default function GameBoard() {
 
       {/* Board */}
       <BoardImage players={shownPlayers} />
+
+      {/* Ability card slam animation */}
+      {abilityCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/characters/${abilityCard}`}
+            alt="Ability"
+            className="w-48 animate-card-slam"
+          />
+        </div>
+      )}
 
       {/* Players */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

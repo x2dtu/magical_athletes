@@ -167,16 +167,17 @@ export function applyMove(state: GameState, roll: number): TurnResult {
   turnLogs.push(...turnEndResult.log);
   steps.push(...turnEndResult.steps);
 
-  // --- Check for placements ---
-  const movedPlayer = players.find((p) => p.id === player.id)!;
-  const justFinished = movedPlayer.finished && !state.placements.some((p) => p.id === movedPlayer.id);
-  const newPlacements = justFinished ? [...state.placements, movedPlayer] : state.placements;
-
-  if (justFinished) {
-    const PLACEMENT_POINTS = [5, 3];
+  // --- Check for placements (any player who finished this turn, not just active) ---
+  const PLACEMENT_POINTS = [5, 3];
+  const newPlacements = [...state.placements];
+  const newlyFinished = players.filter(
+    (p) => p.finished && !state.placements.some((pl) => pl.id === p.id)
+  );
+  for (const finisher of newlyFinished) {
+    newPlacements.push(finisher);
     const pointsAwarded = PLACEMENT_POINTS[newPlacements.length - 1] ?? 0;
-    players = players.map((p) => (p.id === movedPlayer.id ? { ...p, points: p.points + pointsAwarded } : p));
-    const placeMsg = `${movedPlayer.name} takes ${ordinalPlace(newPlacements.length)}! (+${pointsAwarded} pts)`;
+    players = players.map((p) => (p.id === finisher.id ? { ...p, points: p.points + pointsAwarded } : p));
+    const placeMsg = `${finisher.name} takes ${ordinalPlace(newPlacements.length)}! (+${pointsAwarded} pts)`;
     turnLogs.push(placeMsg);
     steps.push({ players: [...players], message: placeMsg });
   }
